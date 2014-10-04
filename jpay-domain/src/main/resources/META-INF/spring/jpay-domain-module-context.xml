@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jaxrs="http://cxf.apache.org/jaxrs"
+       xsi:schemaLocation="
+            http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+            http://cxf.apache.org/jaxrs http://cxf.apache.org/schemas/jaxrs.xsd">
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    <context:annotation-config/>
+
+    <bean id="jpayDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${datasource.driverClassName}"/>
+        <property name="url" value="${datasource.url}"/>
+        <property name="username" value="${datasource.username}"/>
+        <property name="password" value="${datasource.password}"/>
+        <property name="initialSize" value="${datasource.initialSize}"/>
+        <property name="minIdle" value="${datasource.minIdle}"/>
+        <property name="maxIdle" value="${datasource.maxIdle}"/>
+        <property name="maxActive" value="${datasource.maxActive}"/>
+    </bean>
+
+    <bean id="jpaProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="location">
+            <value>classpath:META-INF/persistence.properties</value>
+        </property>
+    </bean>
+
+    <!-- we need this because model classes are in a different classloader than persistence -->
+    <bean id="javaAssistClassLoader" class="jpay.osgi.JavaAssistHelper" factory-method="createJavaAssistClassLoader"/>
+
+    <bean id="entityManagerFactory" depends-on="javaAssistClassLoader"
+          class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <property name="persistenceUnitName" value="jpayPersistenceUnit"/>
+        <property name="dataSource" ref="jpayDataSource"/>
+        <property name="jpaProperties" ref="jpaProperties"/>
+    </bean>
+
+    <bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+
+    <bean id="entityManager" class="org.springframework.orm.jpa.support.SharedEntityManagerBean">
+        <property name="entityManagerFactory" ref="entityManagerFactory"/>
+    </bean>
+
+   <bean id="creditCardSource" class="jpay.domain.CreditCardJpaSource"/>
+
+    <bean id="creditCardManager" class="jpay.domain.CreditCardManager">
+        <property name="creditCardSource" ref="creditCardSource" />
+    </bean>
+
+</beans>
